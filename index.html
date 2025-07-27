@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket Players Records</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f8ff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .search-box {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        #user_input {
+            padding: 12px 15px;
+            width: 400px;
+            border: 2px solid #3498db;
+            border-radius: 5px 0 0 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px 25px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .response-container {
+            width: 100%;
+            margin-top: 30px;
+        }
+        .response-box {
+            width: 100%;
+            min-height: 600px;
+            border: 2px solid #141719;
+            border-radius: 5px;
+            padding: 25px;
+            background-color:white;
+            overflow-x: auto;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+        }
+        .response-title {
+            font-size: 1.5em;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9em;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        th {
+            background-color: #3498db;
+            color:black;
+            text-align: left;
+            padding: 12px 15px;
+        }
+        td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #dddddd; 
+        }
+        tr:nth-child(even) {
+            background-color:  #f3f9ff;  
+        }
+        tr:hover {
+            background-color:  #e1f0ff;  
+        }
+        .loading {
+            text-align: center;
+            font-style: italic;
+            color: #7f8c8d;
+            font-size: 1.2em;
+            margin-top: 50px;
+        }
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            #user_input {
+                width: 70%;
+            }
+            .response-box {
+                min-height: 400px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏏 CRICKET PLAYERS RECORDS 🏏</h1>
+        
+        <div class="search-box">
+            <input type="text" id="user_input" placeholder="Enter player name :">
+            <button onclick="sendInput()">Search Player</button>
+        </div>
+        
+        <div class="response-container">
+            <div class="response-title">Player Statistics</div>
+            <div class="response-box">
+                <div id="response">
+                    <p style="text-align: center; color: black;">
+                        Search for any cricket player to view their detailed statistics and records
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function sendInput() {
+            const input = document.getElementById("user_input").value.trim();
+            if (!input) {
+                alert("Please enter a player name");
+                return;
+            }
+            
+            const responseDiv = document.getElementById("response");
+            responseDiv.innerHTML = '<p class="loading">Fetching cricket records for ' + input + '...</p>';
+            
+            fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'user_input=' + encodeURIComponent("Provide detailed cricket statistics for " + input + " in HTML table format. Include batting averages, strike rates, centuries, wickets (if applicable), and career highlights.")
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Format the response to ensure proper table display
+                let formattedResponse = data.response;
+                
+                // If response contains markdown tables, convert them to HTML
+                if (formattedResponse.includes('|')) {
+                    formattedResponse = markdownTablesToHTML(formattedResponse);
+                }
+                
+                responseDiv.innerHTML = formattedResponse;
+            })
+            .catch(error => {
+                responseDiv.innerHTML = '<p class="error">Error: ' + error.message + '</p>';
+            });
+        }
+        
+        function markdownTablesToHTML(text) {
+            // Simple markdown table to HTML conversion
+            const lines = text.split('\n');
+            let inTable = false;
+            let html = '';
+            
+            for (let line of lines) {
+                if (line.trim().startsWith('|') && line.includes('---')) {
+                    // Table header separator
+                    continue;
+                } else if (line.trim().startsWith('|')) {
+                    if (!inTable) {
+                        html += '<table>';
+                        inTable = true;
+                    }
+                    html += '<tr>';
+                    const cells = line.split('|').slice(1, -1);
+                    for (let cell of cells) {
+                        html += '<td>' + cell.trim() + '</td>';
+                    }
+                    html += '</tr>';
+                } else {
+                    if (inTable) {
+                        html += '</table>';
+                        inTable = false;
+                    }
+                    html += line + '<br>';
+                }
+            }
+            
+            if (inTable) {
+                html += '</table>';
+            }
+            
+            return html;
+        }
+        
+        // Allow pressing Enter key to submit
+        document.getElementById("user_input").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                sendInput();
+            }
+        });
+    </script>
+</body>
+</html>
